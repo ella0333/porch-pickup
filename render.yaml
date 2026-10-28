@@ -1,0 +1,75 @@
+databases:
+  - name: porch-pickup-db
+    plan: 0.1c-256mb
+    region: ohio
+    postgresMajorVersion: "16"
+    databaseName: porch
+    user: porch
+
+services:
+  - type: web
+    name: porch-pickup
+    runtime: node
+    plan: 0.5c-512mb
+    region: ohio
+    buildCommand: npm ci && npm run build
+    preDeployCommand: npx prisma db push --skip-generate && npm run db:seed
+    startCommand: npm start
+    healthCheckPath: /login
+    envVars:
+      - key: NODE_VERSION
+        value: "20.17.0"
+      - key: DATABASE_URL
+        fromDatabase:
+          name: porch-pickup-db
+          property: connectionString
+      - key: SESSION_SECRET
+        generateValue: true
+      - key: CRON_SECRET
+        generateValue: true
+      - key: DEMO_MODE
+        value: "true"
+      - key: PAYPAL_ENV
+        value: sandbox
+      - key: OPENROUTER_MODEL
+        value: meta-llama/llama-4-scout
+      - key: PAYPAL_CLIENT_ID
+        sync: false
+      - key: PAYPAL_CLIENT_SECRET
+        sync: false
+      - key: PAYPAL_WEBHOOK_ID
+        sync: false
+      - key: OPENROUTER_API_KEY
+        sync: false
+      - key: CHANNEL3_API_KEY
+        sync: false
+      - key: EBAY_CLIENT_ID
+        sync: false
+      - key: EBAY_CLIENT_SECRET
+        sync: false
+      - key: DEMO_PAYOUT_EMAILS
+        sync: false
+      - key: DEMO_PASSWORD
+        sync: false
+
+  - type: cron
+    name: porch-pickup-cron
+    runtime: node
+    plan: 0.5c-512mb
+    region: ohio
+    schedule: "*/5 * * * *"
+    buildCommand: npm ci
+    startCommand: npm run cron
+    envVars:
+      - key: NODE_VERSION
+        value: "20.17.0"
+      - key: APP_HOSTPORT
+        fromService:
+          type: web
+          name: porch-pickup
+          property: hostport
+      - key: CRON_SECRET
+        fromService:
+          type: web
+          name: porch-pickup
+          envVarKey: CRON_SECRET

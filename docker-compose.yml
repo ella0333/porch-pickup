@@ -1,0 +1,13 @@
+services:
+  db:
+    image: postgres:16
+    environment:
+      POSTGRES_USER: porch
+      POSTGRES_PASSWORD: porch
+      POSTGRES_DB: porch
+    ports:
+      - "5432:5432"
+    volumes:
+      - porchdata:/var/lib/postgresql/data
+volumes:
+  porchdata:

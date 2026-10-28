@@ -1,0 +1,197 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum Role {
+  USER
+  ADMIN
+}
+
+enum PayoutWallet {
+  PAYPAL
+  VENMO
+}
+
+enum ListingStatus {
+  ACTIVE
+  PENDING
+  SOLD
+  REMOVED
+}
+
+enum Condition {
+  NEW
+  LIKE_NEW
+  GOOD
+  FAIR
+  POOR
+}
+
+enum OrderStatus {
+  AWAITING_PAYMENT
+  AWAITING_SELLER
+  CONFIRMED
+  COMPLETED
+  DECLINED
+  EXPIRED
+  REPORTED_MISSING
+  REFUNDED
+  DISPUTED
+  CANCELLED
+}
+
+model User {
+  id             String        @id @default(cuid())
+  email          String        @unique
+  passwordHash   String
+  name           String
+  role           Role          @default(USER)
+  banned         Boolean       @default(false)
+  isDemo         Boolean       @default(false)
+  payoutWallet   PayoutWallet  @default(PAYPAL)
+  payoutReceiver String?
+  // Where the buyer browses from when no browser location is given.
+  homeLat        Float?
+  homeLng        Float?
+  createdAt      DateTime      @default(now())
+
+  pickupSpot      PickupSpot?
+  listings        Listing[]
+  buyerOrders     Order[]       @relation("buyer")
+  sellerOrders    Order[]       @relation("seller")
+  messages        Message[]
+  reviewsWritten  Review[]      @relation("author")
+  reviewsReceived Review[]      @relation("target")
+  reportsMade     Report[]      @relation("reporter")
+  reportsAgainst  Report[]      @relation("reportedUser")
+}
+
+model PickupSpot {
+  id           String   @id @default(cuid())
+  userId       String   @unique
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  address      String
+  lat          Float
+  lng          Float
+  // Randomly offset point shown to buyers, stored so it never moves.
+  publicLat    Float
+  publicLng    Float
+  instructions String
+  // ISO dates (YYYY-MM-DD) the seller is home for pickups.
+  dates        String[]
+  // Minutes after midnight, local to the seller.
+  startMinute  Int      @default(540)
+  endMinute    Int      @default(1260)
+  timezone     String   @default("America/New_York")
+  updatedAt    DateTime @updatedAt
+}
+
+model Listing {
+  id             String        @id @default(cuid())
+  sellerId       String
+  seller         User          @relation(fields: [sellerId], references: [id], onDelete: Cascade)
+  title          String
+  description    String
+  category       String
+  condition      Condition
+  conditionNotes String[]
+  price          Int // cents
+  suggestedPrice Int? // cents
+  priceReason    String?
+  sellerNotes    String?
+  status         ListingStatus @default(ACTIVE)
+  createdAt      DateTime      @default(now())
+
+  photos  Photo[]
+  orders  Order[]
+  reports Report[]
+}
+
+model Photo {
+  id        String  @id @default(cuid())
+  listingId String?
+  listing   Listing? @relation(fields: [listingId], references: [id], onDelete: Cascade)
+  orderId   String?
+  data      Bytes
+  mime      String  @default("image/jpeg")
+  position  Int     @default(0)
+  createdAt DateTime @default(now())
+}
+
+model Order {
+  id              String      @id @default(cuid())
+  listingId       String
+  listing         Listing     @relation(fields: [listingId], references: [id])
+  buyerId         String
+  buyer           User        @relation("buyer", fields: [buyerId], references: [id])
+  sellerId        String
+  seller          User        @relation("seller", fields: [sellerId], references: [id])
+  amount          Int // cents
+  pickupAt        DateTime
+  status          OrderStatus @default(AWAITING_PAYMENT)
+  paypalOrderId   String?     @unique
+  authorizationId String?
+  authorizedAt    DateTime?
+  captureId       String?
+  payoutBatchId   String?
+  payoutStatus    String?
+  fundingSource   String?
+  missingNote     String?
+  contestNote     String?
+  contestPhotoId  String?
+  adminNote       String?
+  createdAt       DateTime    @default(now())
+  confirmedAt     DateTime?
+  reportedAt      DateTime?
+  contestedAt     DateTime?
+  completedAt     DateTime?
+  closedAt        DateTime?
+  nudgedAt        DateTime?
+
+  messages Message[]
+  reviews  Review[]
+}
+
+model Message {
+  id        String   @id @default(cuid())
+  orderId   String
+  order     Order    @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  authorId  String
+  author    User     @relation(fields: [authorId], references: [id])
+  body      String
+  system    Boolean  @default(false)
+  createdAt DateTime @default(now())
+}
+
+model Review {
+  id        String   @id @default(cuid())
+  orderId   String
+  order     Order    @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  authorId  String
+  author    User     @relation("author", fields: [authorId], references: [id])
+  targetId  String
+  target    User     @relation("target", fields: [targetId], references: [id])
+  stars     Int
+  text      String?
+  createdAt DateTime @default(now())
+
+  @@unique([orderId, authorId])
+}
+
+model Report {
+  id             String   @id @default(cuid())
+  reporterId     String
+  reporter       User     @relation("reporter", fields: [reporterId], references: [id])
+  reportedUserId String?
+  reportedUser   User?    @relation("reportedUser", fields: [reportedUserId], references: [id])
+  listingId      String?
+  listing        Listing? @relation(fields: [listingId], references: [id])
+  reason         String
+  resolved       Boolean  @default(false)
+  createdAt      DateTime @default(now())
+}

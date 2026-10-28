@@ -1,0 +1,48 @@
+@import "tailwindcss";
+
+@theme {
+  --color-ink: #1f2a24;
+  --color-muted: #5d6b63;
+  --color-line: #e3e0d8;
+  --color-paper: #faf8f3;
+  --color-card: #ffffff;
+  --color-brand: #2f6b4f;
+  --color-brand-dark: #24543e;
+  --color-brand-soft: #e6f0ea;
+  --color-warn: #a4541a;
+  --color-warn-soft: #fbeee2;
+  --color-bad: #a3302a;
+  --color-bad-soft: #fbe9e7;
+  --font-sans: "Inter", ui-sans-serif, system-ui, sans-serif;
+}
+
+html,
+body {
+  background: var(--color-paper);
+  color: var(--color-ink);
+}
+
+@utility btn {
+  @apply inline-flex items-center justify-center gap-2 rounded-lg px-4 py-2.5 text-sm font-semibold transition disabled:opacity-50 disabled:cursor-not-allowed;
+}
+@utility btn-primary {
+  @apply btn bg-brand text-white hover:bg-brand-dark;
+}
+@utility btn-ghost {
+  @apply btn border border-line bg-card text-ink hover:bg-paper;
+}
+@utility btn-danger {
+  @apply btn border border-bad/30 bg-bad-soft text-bad hover:bg-bad/10;
+}
+@utility card {
+  @apply rounded-xl border border-line bg-card;
+}
+@utility field {
+  @apply w-full rounded-lg border border-line bg-card px-3 py-2 text-sm outline-none focus:border-brand focus:ring-2 focus:ring-brand/20;
+}
+@utility label {
+  @apply mb-1 block text-sm font-medium text-ink;
+}
+@utility pill {
+  @apply inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium;
+}
